@@ -1,17 +1,11 @@
 # OO Rock, Paper, Scissors game with Bonus Features
 class Player
-  attr_accessor :name
-  attr_reader :move, :wins
+  attr_accessor :move, :name
+  attr_reader :wins
 
   def initialize
     set_name
     @wins = 0
-    @move_history = []
-  end
-
-  def move=(choice)
-    self.save_last_move if !!move
-    @move = choice
   end
 
   def won_round
@@ -20,14 +14,6 @@ class Player
 
   def won_game?(max = RPSGame::ROUNDS_TO_WIN)
     @wins >= max
-  end
-
-  def move_history
-    @move_history.join(', ')
-  end
-
-  def save_last_move
-    @move_history << move
   end
 end
 
@@ -58,20 +44,20 @@ class Human < Player
 
   ## MAKE CHOICE A NEW CLASS??
   def valid_choice?(choice)
-    Move::HANDS.include?(choice) || Move::SHORT_HANDS.include?(choice)
+    Move::VALUES.include?(choice) || Move::SHORTHAND_VALUES.include?(choice)
   end
 
   def to_longhand(choice)
     return nil if !valid_choice?(choice)
-    return choice if Move::HANDS.include? choice
+    return choice if Move::VALUES.include? choice
 
-    idx = Move::SHORT_HANDS.index(choice)
-    Move::HANDS[idx]
+    idx = Move::SHORTHAND_VALUES.index(choice)
+    Move::VALUES[idx]
   end
 
   def display_choices
-    short = Move::SHORT_HANDS.map { |str| "(#{str})" }
-    Move::HANDS.zip(short).map(&:join).join(', ')
+    short = Move::SHORTHAND_VALUES.map { |str| "(#{str})" }
+    Move::VALUES.zip(short).map(&:join).join(', ')
   end
 end
 
@@ -81,13 +67,13 @@ class Computer < Player
   end
 
   def choose
-    self.move = Move.new(Move::HANDS.sample)
+    self.move = Move.new(Move::VALUES.sample)
   end
 end
 
 class Move
-  HANDS = ['rock', 'paper', 'scissors', 'spock', 'lizard']
-  SHORT_HANDS = ['r', 'p', 'sc', 'sp', 'l']
+  VALUES = ['rock', 'paper', 'scissors', 'spock', 'lizard']
+  SHORTHAND_VALUES = ['r', 'p', 'sc', 'sp', 'l']
   WINNING_COMBOS = {'rock'=>['scissors', 'lizard'],
                     'paper'=>['rock', 'spock'],
                     'scissors'=>['paper', 'lizard'],
@@ -118,10 +104,6 @@ class Move
   end
 end
 
-# class Rock
-#   def initialize()
-# end
-
 class RPSGame
   ROUNDS_TO_WIN = 3
   attr_accessor :human, :computer
@@ -134,7 +116,7 @@ class RPSGame
   end
 
   def list_of_moves
-    Move::HANDS.map(&:upcase).join(', ')
+    Move::VALUES.map(&:upcase).join(', ')
   end
 
   def display_welcome_message
@@ -176,16 +158,10 @@ class RPSGame
     when -1
       puts "#{computer.name} won the game!"
     when 1
-      puts "#{human.name} won the game!"
+      puts "#{human.name} won this round!"
     else
       puts "Error, we tiredddd, we give up!"
     end
-  end
-
-  def display_move_history
-    puts "Game Summary:"
-    puts "#{human.name} played: #{human.move_history}."
-    puts "#{computer.name} played: #{computer.move_history}."
   end
 
   def play_again?
@@ -213,7 +189,6 @@ class RPSGame
       end
       break unless play_again?
     end
-    display_move_history
     display_goodbye_message
   end
 end
