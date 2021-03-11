@@ -9,6 +9,86 @@ module Formattable
   end
 end
 
+class Move
+  HANDS = ['rock', 'paper', 'scissors', 'spock', 'lizard']
+  SHORT_HANDS = {'r'=>'rock', 'p'=>'paper', 'sc'=>'scissors',
+                 'sp'=>'spock', 'l'=>'lizard'}
+  WINNING_COMBOS = {'rock'=>['scissors', 'lizard'],
+                    'paper'=>['rock', 'spock'],
+                    'scissors'=>['paper', 'lizard'],
+                    'spock'=>['scissors', 'rock'],
+                    'lizard'=>['spock', 'paper']}
+
+  attr_reader :hand #, :winning_combo
+
+  def initialize(hand)
+    @hand = hand
+    # set_winning_combo
+  end
+
+  # def set_winning_combo
+  #   @winning_combo = WINNING_COMBOS[@hand]
+  # end
+  #
+  # def <=>(other_move)
+  #   other_hand = other_move.hand
+  #   if hand == other_hand
+  #     0
+  #   elsif @winning_combo.include?(other_hand)
+  #     1
+  #   elsif other_move.winning_combo.include?(hand)
+  #     -1
+  #   else
+  #     nil
+  #   end
+  # end
+
+  def <=>(other_move)
+    other_hand = other_move.hand
+    if hand == other_hand
+      0
+    elsif WINNING_COMBOS[hand].include?(other_hand)
+      1
+    elsif WINNING_COMBOS[other_hand].include?(hand)
+      -1
+    else
+      nil
+    end
+  end
+
+  def to_s
+    @hand
+  end
+
+  def self.valid?(choice)
+    HANDS.include?(choice) || SHORT_HANDS.keys.include?(choice)
+  end
+
+  def self.longhand(choice)
+    return nil if !self.valid?(choice)
+
+    if SHORT_HANDS.keys.include?(choice)
+      return SHORT_HANDS[choice]
+    end
+
+    choice
+  end
+
+  def to_longhand!
+    return nil if !self.class.valid?(@hand)
+
+    if SHORT_HANDS.keys.include?(@hand)
+      @hand = SHORT_HANDS[@hand]
+    end
+
+    self
+  end
+
+  def self.display_choices
+    SHORT_HANDS.map { |short, long| "#{long}(#{short})" }.join(', ')
+  end
+end
+
 class Player
   include Formattable
 
@@ -26,7 +106,7 @@ class Player
   end
 
   def move=(choice)
-    save_last_move if !!move
+    self.save_last_move if !!move
     @move = choice
   end
 
@@ -68,17 +148,16 @@ class Human < Player
       puts "Sorry, invalid entry."
     end
     choice = Move.longhand(choice)
-    self.move = Move.new(choice) # .to_longhand!
+    self.move = Move.new(choice) #.to_longhand!
   end
 end
 
 class Computer < Player
   NAMES = ['Bot', 'R2D2', 'Sonny', 'Hal']
-  TENDENCIES = { 'Bot' => ['rock', 'paper', 'scissors', 'spock', 'lizard'],
-                 'R2D2' => ['scissors', 'scissors', 'scissors', 'rock', 'spock',
-                            'lizard'],
-                 'Sonny' => ['rock'],
-                 'Hal' => ['rock', 'paper', 'scissors'] }
+  TENDENCIES = {'Bot'=>['rock', 'paper', 'scissors', 'spock', 'lizard'],
+                'R2D2'=>['scissors', 'scissors', 'scissors', 'rock', 'spock', 'lizard'],
+                'Sonny'=>['rock'],
+                'Hal'=>['rock', 'paper', 'scissors']}
 
   attr_reader :tendency
 
@@ -92,86 +171,13 @@ class Computer < Player
   end
 
   def set_tendency
+
+
     @tendency = TENDENCIES[name]
   end
 
   def choose
     self.move = Move.new(tendency.sample)
-  end
-end
-
-class Move
-  HANDS = ['rock', 'paper', 'scissors', 'spock', 'lizard']
-  SHORT_HANDS = { 'r' => 'rock', 'p' => 'paper', 'sc' => 'scissors',
-                  'sp' => 'spock', 'l' => 'lizard' }
-  WINNING_COMBOS = { 'rock' => ['scissors', 'lizard'],
-                     'paper' => ['rock', 'spock'],
-                     'scissors' => ['paper', 'lizard'],
-                     'spock' => ['scissors', 'rock'],
-                     'lizard' => ['spock', 'paper'] }
-
-  attr_reader :hand # , :winning_combo
-
-  def initialize(hand)
-    @hand = hand
-    # set_winning_combo
-  end
-
-  def <=>(other_move)
-    other_hand = other_move.hand
-    return 0 if hand == other_hand
-    return 1 if WINNING_COMBOS[hand].include?(other_hand)
-    return -1 if WINNING_COMBOS[other_hand].include?(hand)
-    nil
-  end
-
-  # def set_winning_combo
-  #   @winning_combo = WINNING_COMBOS[@hand]
-  # end
-  #
-  # def <=>(other_move)
-  #   other_hand = other_move.hand
-  #   if hand == other_hand
-  #     0
-  #   elsif @winning_combo.include?(other_hand)
-  #     1
-  #   elsif other_move.winning_combo.include?(hand)
-  #     -1
-  #   else
-  #     nil
-  #   end
-  # end
-
-  def to_s
-    @hand
-  end
-
-  def self.valid?(choice)
-    HANDS.include?(choice) || SHORT_HANDS.keys.include?(choice)
-  end
-
-  def self.longhand(choice)
-    return nil if !valid?(choice)
-
-    if SHORT_HANDS.keys.include?(choice)
-      return SHORT_HANDS[choice]
-    end
-
-    choice
-  end
-
-  def to_longhand!
-    return nil if !valid?(@hand)
-
-    if SHORT_HANDS.keys.include?(@hand)
-      @hand = SHORT_HANDS[@hand]
-    end
-
-    self
-  end
-
-  def self.display_choices
-    SHORT_HANDS.map { |short, long| "#{long}(#{short})" }.join(', ')
   end
 end
 
@@ -187,7 +193,6 @@ class RPSGame
     @game_version = list_of_moves
   end
 
-  # rubocop:disable Metrics/MethodLength
   def play
     clear_screen
     display_welcome_message
@@ -197,7 +202,7 @@ class RPSGame
       display_moves
       display_round_winner
       display_game_score
-      if a_game_winner?
+      if have_a_game_winner?
         display_game_winner
         display_move_history
         break
@@ -207,7 +212,6 @@ class RPSGame
     end
     display_goodbye_message
   end
-  # rubocop:enable Metrics/MethodLength
 
   private
 
@@ -245,11 +249,10 @@ class RPSGame
   end
 
   def display_game_score
-    puts "The score is #{human.name}: #{human.wins}, " \
-         "#{computer.name}: #{computer.wins}"
+    puts "The score is #{human.name}: #{human.wins}, #{computer.name}: #{computer.wins}"
   end
 
-  def a_game_winner?
+  def have_a_game_winner?
     human.won_game? || computer.won_game?
   end
 
