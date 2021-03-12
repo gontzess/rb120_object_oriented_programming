@@ -12,8 +12,8 @@ end
 class Player
   include Formattable
 
-  attr_accessor :name
-  attr_reader :move, :wins
+  attr_accessor :name, :move
+  attr_reader :wins
 
   def initialize
     set_name
@@ -23,11 +23,6 @@ class Player
 
   def to_s
     @name
-  end
-
-  def move=(choice)
-    save_last_move if !!move
-    @move = choice
   end
 
   def won_round
@@ -43,7 +38,14 @@ class Player
   end
 
   def save_last_move
-    @move_history << move
+    @move_history << move if !!move
+    nil
+  end
+
+  def reset
+    @wins = 0
+    @move_history = []
+    @move = nil
   end
 end
 
@@ -63,7 +65,7 @@ class Human < Player
     choice = nil
     loop do
       puts "Please choose #{Move.display_choices}:"
-      choice = gets.chomp
+      choice = gets.chomp.downcase
       break if Move.valid?(choice)
       puts "Sorry, invalid entry."
     end
@@ -189,21 +191,17 @@ class RPSGame
 
   # rubocop:disable Metrics/MethodLength
   def play
-    clear_screen
-    display_welcome_message
     loop do
-      human.choose
-      computer.choose
-      display_moves
-      display_round_winner
-      display_game_score
-      if a_game_winner?
-        display_game_winner
-        display_move_history
-        break
-      end
-      break unless play_again?
       clear_screen
+      display_welcome_message
+      loop do
+        player_turns
+        display_round_results
+        break if a_game_winner?
+      end
+      display_game_results
+      break unless play_again?
+      reset_game
     end
     display_goodbye_message
   end
@@ -220,10 +218,18 @@ class RPSGame
 
   def display_welcome_message
     puts "Welcome to #{game_version}!"
+    puts "First to #{ROUNDS_TO_WIN} rounds wins!"
   end
 
   def display_goodbye_message
     puts "Thanks for playing #{game_version}. Good bye!"
+  end
+
+  def player_turns
+    human.choose
+    human.save_last_move
+    computer.choose
+    computer.save_last_move
   end
 
   def display_moves
@@ -242,6 +248,12 @@ class RPSGame
     else
       puts "It's a tie this round!"
     end
+  end
+
+  def display_round_results
+    display_moves
+    display_round_winner
+    display_game_score
   end
 
   def display_game_score
@@ -270,15 +282,25 @@ class RPSGame
     puts "#{computer.name} played: #{computer.move_history}."
   end
 
+  def display_game_results
+    display_game_winner
+    display_move_history
+  end
+
   def play_again?
     answer = nil
     loop do
       puts "Would you like to play again? (y/n)"
-      answer = gets.chomp
-      break if %w(y n).include? answer.downcase
+      answer = gets.chomp.downcase
+      break if %w(y n yes no).include? answer
       puts "Sorry, invalid entry."
     end
-    answer == 'y'
+    answer == 'y' || answer == 'yes'
+  end
+
+  def reset_game
+    human.reset
+    computer.reset
   end
 end
 
