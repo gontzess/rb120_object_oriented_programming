@@ -13,6 +13,10 @@ module Formattable
       ary[0..-2].join(divider) + "#{divider}#{ending} #{ary.last}"
     end
   end
+
+  def puts(message)
+    message == '' ? super : super("=> #{message}")
+  end
 end
 
 class Board
@@ -82,19 +86,13 @@ class Board
     @board_size > 3
   end
 
-  # rubocop:disable Metrics/AbcSize
-  # rubocop:disable Metrics/MethodLength
   # rubocop:disable Metrics/CyclomaticComplexity
   def at_risk_squares(player_marker, depth=1)
     at_risk = []
     depth = 1 if !oversized? ## if 3x3 board, ensure depth always 1
     @winning_lines.each do |line|
-      squares, markers = content_from(line)
-      if markers.count(player_marker) == board_size - depth &&
-         squares.select(&:unmarked?).size == depth
-        line.each do |key|
-          at_risk << key if @squares[key].unmarked?
-        end
+      if line_almost_full?(line, player_marker, depth)
+        line.each { |key| at_risk << key if @squares[key].unmarked? }
       end
     end
 
@@ -102,8 +100,6 @@ class Board
 
     at_risk.sort_by { |key| at_risk.count(key) }.reverse.uniq
   end
-  # rubocop:enable Metrics/AbcSize
-  # rubocop:enable Metrics/MethodLength
   # rubocop:enable Metrics/CyclomaticComplexity
 
   def terminal_node(marker, opponent_marker)
@@ -189,6 +185,12 @@ class Board
     return squares, markers
   end
 
+  def line_almost_full?(line, player_marker, depth)
+    squares, markers = content_from(line)
+    markers.count(player_marker) == board_size - depth &&
+      squares.select(&:unmarked?).size == depth
+  end
+
   def unwinnable?(line)
     squares, markers = content_from(line)
     markers.uniq.size == 3 || squares.all?(&:marked?)
@@ -218,12 +220,13 @@ class Square
 end
 
 class TTTPlayer
-  attr_reader :marker, :wins
+  attr_reader :wins, :name, :marker
 
-  def initialize(board, marker)
+  def initialize(board)
     @board = board
-    @marker = marker
     @wins = 0
+    set_name
+    set_marker
   end
 
   def won_round
@@ -252,13 +255,37 @@ class Human < TTTPlayer
     end
     choice
   end
+
+  private
+
+  def set_name
+    n = nil
+    loop do
+      puts "What's your name?"
+      n = gets.chomp
+      break unless n.empty?
+      puts "That's not a valid choice."
+    end
+    @name = n
+  end
+
+  def set_marker
+    m = nil
+    loop do
+      puts "What's your game marker? (such as X or O)"
+      m = gets.chomp.chr
+      break unless m.empty? || m == '-'
+      puts "That's not a valid choice."
+    end
+    @marker = m
+  end
 end
 
 class Computer < TTTPlayer
-  def initialize(board, marker, opponent_marker, difficulty)
-    super(board, marker)
+  def initialize(board, opponent_marker, difficulty)
     @opponent_marker = opponent_marker
     @difficulty = difficulty
+    super(board)
     set_plies
   end
 
@@ -273,6 +300,14 @@ class Computer < TTTPlayer
   private
 
   INFINITY = Float::INFINITY
+
+  def set_name
+    @name = ['Bot', 'R2D2', 'Sonny', 'Hal'].sample
+  end
+
+  def set_marker
+    @marker = ['O', 'o', '0'].include?(@opponent_marker) ? 'X' : 'O'
+  end
 
   def set_plies
     @plies = case board.board_size ## set recommended max plies
@@ -394,24 +429,22 @@ end
 class TTTGame
   include Formattable
 
-  HUMAN_MARKER = "X" ## set after the fact w/ human.marker?
-  COMPUTER_MARKER = "O"
-  ROUNDS_TO_WIN = 3
-  BOARD_SIZE = 3 ## ie choose 3, 5
-  DIFFICULTY = :negamax ## choose :competitive, :minimax, :negamax
+  ## SETTINGS
+  ROUNDS_TO_WIN = 3 ## ie choose 1, 2, 3, 4, 5
+  BOARD_SIZE = 3 ## ie choose 3, 5, 9
+  DIFFICULTY = :competitive ## choose :competitive, :minimax, :negamax
 
   def initialize
+    display_welcome_message
     @board = Board.new(BOARD_SIZE)
-    set_human_marker
-    set_computer_marker
-    @human = Human.new(@board, HUMAN_MARKER)
-    @computer = Computer.new(@board, COMPUTER_MARKER, HUMAN_MARKER, DIFFICULTY)
+    @human = Human.new(@board)
+    @computer = Computer.new(@board, human.marker, DIFFICULTY)
     @round = 1
     set_first_move
   end
 
   def play
-    display_welcome_message
+    display_rules_message
     loop do
       players_move
       display_round_results
@@ -433,6 +466,7 @@ class TTTGame
   end
 
   def display_rules_message
+    puts ""
     puts "Welcome #{human.name}!"
     puts "You will be playing against #{computer.name}."
     puts "The first to #{ROUNDS_TO_WIN} rounds wins all!"
@@ -445,15 +479,16 @@ class TTTGame
   end
 
   def display_board
-    # clear_screen
-    puts "You (Player) are #{human.marker}s. Computer is #{computer.marker}s."
+    clear_screen
+    puts "You (#{human.name}) are #{human.marker}s. " \
+         "#{computer.name} is #{computer.marker}s."
     puts ""
     board.display
     puts ""
   end
 
   def set_first_move
-    @current_marker = @round.odd? ? HUMAN_MARKER : COMPUTER_MARKER
+    @current_marker = @round.odd? ? human.marker : computer.marker
   end
 
   def human_moves
@@ -471,10 +506,10 @@ class TTTGame
     when human.marker
       display_board
       human_moves
-      @current_marker = COMPUTER_MARKER
+      @current_marker = computer.marker
     when computer.marker
       computer_moves
-      @current_marker = HUMAN_MARKER
+      @current_marker = human.marker
     end
   end
 
@@ -486,25 +521,28 @@ class TTTGame
   end
 
   def display_score
-    puts "You: #{human.wins}, Computer: #{computer.wins}."
+    puts "#{human.name}: #{human.wins}, #{computer.name}: #{computer.wins}."
   end
 
-  # rubocop:disable Metrics/MethodLength
+  def human_wins
+    human.won_round
+    puts "#{human.name} wins this round!"
+  end
+
+  def computer_wins
+    computer.won_round
+    puts "#{computer.name} wins this round!"
+  end
+
   def display_round_results
     display_board
     case board.winning_marker
-    when human.marker
-      human.won_round
-      puts "You won this round!"
-    when computer.marker
-      computer.won_round
-      puts "Computer won this round!"
-    else
-      puts "It's a draw!"
+    when human.marker     then human_wins
+    when computer.marker  then computer_wins
+    else                       puts "It's a draw!"
     end
     display_score
   end
-  # rubocop:enable Metrics/MethodLength
 
   def reset
     @round += 1
