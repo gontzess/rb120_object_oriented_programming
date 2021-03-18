@@ -16,7 +16,7 @@ module Formattable
 end
 
 class Board
-  attr_reader :board_size
+  attr_reader :board_size, :center_key
 
   def initialize(board_size)
     @board_size = board_size
@@ -48,7 +48,7 @@ class Board
   # rubocop:enable Metrics/MethodLength
 
   def reset_squares
-    (1..num_of_squares).each { |key| @squares[key] = Square.new }
+    (1..@num_of_squares).each { |key| @squares[key] = Square.new }
   end
 
   def reset_winning_lines
@@ -62,59 +62,49 @@ class Board
     @squares[key].marker = marker
   end
 
-  # def copy_of_board_state(brd)
-  #   brd_copy = Hash.new(INITIAL_MARKER)
-  #   (1..MAX_TURNS).each { |num| brd_copy[num] = brd[num] }
-  #   brd_copy
-  # end
-
-  def clone
-    clone = Board.new(@board_size)
-    (1..num_of_squares).each do |key|
-      marker = @squares[key].marker
-      clone[key] = Square.new(marker)
+  def copy
+    brd_clone = Board.new(board_size)
+    (1..@num_of_squares).each do |key|
+      brd_clone[key] = @squares[key].marker
     end
-    clone.update_winnable_lines
-    clone
+    brd_clone.update_winnable_lines
   end
 
   def unmarked_keys
     @squares.keys.select { |num| @squares[num].unmarked? }
   end
 
-  def center_square_unmarked?
-    @squares[@center_key].unmarked?
-  end
-
   def center_square
-    @center_key
+    @squares[@center_key]
   end
 
   def oversized?
     @board_size > 3
   end
 
+  # rubocop:disable Metrics/AbcSize
+  # rubocop:disable Metrics/MethodLength
+  # rubocop:disable Metrics/CyclomaticComplexity
   def at_risk_squares(player_marker, depth=1)
     at_risk = []
-    # depth = 1 if board_size == 3 # if 3x3 board, always set depth of 1
-    winning_lines.each do |line|
-      squares = @squares.values_at(*line)
-      markers = squares.map(&:marker)
-      if markers.count(player_marker) == (board_size - depth) &&
+    depth = 1 if !oversized? ## if 3x3 board, ensure depth always 1
+    @winning_lines.each do |line|
+      squares, markers = content_from(line)
+      if markers.count(player_marker) == board_size - depth &&
          squares.select(&:unmarked?).size == depth
         line.each do |key|
           at_risk << key if @squares[key].unmarked?
         end
       end
     end
-    at_risk = at_risk.sort_by { |square| at_risk.count(square) }.reverse.uniq
 
-    at_risk.empty? ? nil : at_risk
-  end
+    return nil if at_risk.empty?
 
-  def update_winnable_lines
-    @winning_lines.reject! { |line| unwinnable?(line) }
+    at_risk.sort_by { |key| at_risk.count(key) }.reverse.uniq
   end
+  # rubocop:enable Metrics/AbcSize
+  # rubocop:enable Metrics/MethodLength
+  # rubocop:enable Metrics/CyclomaticComplexity
 
   def terminal_node(marker, opponent_marker)
     certain_win = winning_marker == marker
@@ -131,27 +121,14 @@ class Board
   end
 
   def winning_marker
-    winning_lines.each do |line|
-      squares = @squares.values_at(*line)
-      markers = squares.map(&:marker)
+    @winning_lines.each do |line|
+      squares, markers = content_from(line)
       if markers.uniq.size == 1 && squares.all?(&:marked?)
         return markers.first
       end
     end
     nil
   end
-
-  # def detect_round_winner(output_as_num: false)
-  #   winning_lines.each do |line|
-  #     markers = @squares.values_at(*line).map(&:marker)
-  #     if markers.count(TTTGame::HUMAN_MARKER) == board_size
-  #       return output_as_num ? -1 : TTTGame::HUMAN_MARKER
-  #     elsif markers.count(TTTGame::COMPUTER_MARKER) == board_size
-  #       return output_as_num ? 1 : TTTGame::COMPUTER_MARKER
-  #     end
-  #   end
-  #   nil
-  # end
 
   def someone_won_round?
     !!winning_marker
@@ -162,13 +139,18 @@ class Board
     @winning_lines.empty?
   end
 
-  private
+  protected
 
-  attr_reader :num_of_squares, :winning_lines
+  def update_winnable_lines
+    @winning_lines.reject! { |line| unwinnable?(line) }
+    self
+  end
+
+  private
 
   def winning_rows
     winning_rows = []
-    (1..num_of_squares).step(board_size) do |x|
+    (1..@num_of_squares).step(board_size) do |x|
       row = []
       (0..board_size - 1).each do |y|
         row << x + y
@@ -182,7 +164,7 @@ class Board
     winning_columns = []
     (1..board_size).each do |x|
       column = []
-      (x..num_of_squares).step(board_size) do |y|
+      (x..@num_of_squares).step(board_size) do |y|
         column << y
       end
       winning_columns << column
@@ -201,9 +183,14 @@ class Board
     [diagonal1, diagonal2]
   end
 
-  def unwinnable?(line)
+  def content_from(line)
     squares = @squares.values_at(*line)
     markers = squares.map(&:marker)
+    return squares, markers
+  end
+
+  def unwinnable?(line)
+    squares, markers = content_from(line)
     markers.uniq.size == 3 || squares.all?(&:marked?)
   end
 end
@@ -288,51 +275,62 @@ class Computer < TTTPlayer
   INFINITY = Float::INFINITY
 
   def set_plies
-    @plies = case board.board_size  ## recommended max plies
+    @plies = case board.board_size ## set recommended max plies
              when 3 then 10
              when 5 then 10
              else        3
              end
   end
 
-  def find_competitive_move
-    immediate_wins = board.at_risk_squares(@marker)
-    immediate_threats = board.at_risk_squares(@opponent_marker)
-    puts "wins: #{immediate_wins}"
-    puts "threats: #{immediate_threats}"
-    if board.oversized?
-      look_ahead_wins = board.at_risk_squares(@marker, 2)
-      look_ahead_threats = board.at_risk_squares(@opponent_marker, 2)
-    end
-
-    if !!immediate_wins                            then immediate_wins.first
-    elsif !!immediate_threats                      then immediate_threats.first
-    elsif board.center_square_unmarked?            then board.center_square
-    elsif board.oversized? && !!look_ahead_wins    then look_ahead_wins.first
-    elsif board.oversized? && !!look_ahead_threats then look_ahead_threats.first
-    else                                              board.unmarked_keys.sample
-    end
+  def find_wins_threats(depth=1)
+    wins = board.at_risk_squares(@marker, depth)
+    threats = board.at_risk_squares(@opponent_marker, depth)
+    return wins, threats
   end
 
-  def minimax(square_key, brd, depth, side=1)
-    brd_copy = brd.clone
-    mark = side.positive? ? @marker : @opponent_marker
-    brd_copy[square_key] = mark
+  # rubocop:disable Metrics/AbcSize
+  # rubocop:disable Metrics/MethodLength
+  # rubocop:disable Metrics/CyclomaticComplexity
+  # rubocop:disable Metrics/PerceivedComplexity
+  def find_competitive_move
+    immediate_wins, immediate_threats = find_wins_threats
 
-    terminal_node, value = brd_copy.terminal_node(@marker, @opponent_marker)
-
-    if terminal_node || depth == 0
-      return depth * value
+    if board.oversized?
+      look_ahead_wins, look_ahead_threats = find_wins_threats(2)
     end
 
+    if !!immediate_wins
+      immediate_wins.first
+    elsif !!immediate_threats
+      immediate_threats.first
+    elsif board.center_square.unmarked?
+      board.center_key
+    elsif board.oversized? && !!look_ahead_wins
+      look_ahead_wins.first
+    elsif board.oversized? && !!look_ahead_threats
+      look_ahead_threats.first
+    else
+      board.unmarked_keys.sample
+    end
+  end
+  # rubocop:enable Metrics/PerceivedComplexity
+
+  def minimax(square_key, brd, depth, side=1)
+    brd_copy = brd.copy
+    marker = side.positive? ? @marker : @opponent_marker
+    brd_copy[square_key] = marker
+
+    terminal_node, value = brd_copy.terminal_node(@marker, @opponent_marker)
+    return depth * value if terminal_node || depth == 0
+
     case side
-    when 1 # Computer aka maximizing player
+    when 1 ## Computer aka maximizing player
       value = -INFINITY
       brd_copy.unmarked_keys.each do |key|
         value = [value, minimax(key, brd_copy, (depth - 1), -side)].max
       end
       value
-    when -1 # Player aka minimizing player
+    when -1 ## Player aka minimizing player
       value = INFINITY
       brd_copy.unmarked_keys.each do |key|
         value = [value, minimax(key, brd_copy, (depth - 1), -side)].min
@@ -340,30 +338,33 @@ class Computer < TTTPlayer
       value
     end
   end
+  # rubocop:enable Metrics/AbcSize
+  # rubocop:enable Metrics/MethodLength
+  # rubocop:enable Metrics/CyclomaticComplexity
 
   def find_minimax_move(brd=@board, depth=@plies, side=1)
-    empty_squares = brd.unmarked_keys
-    return brd.center_square if brd.center_square_unmarked?
-    return find_competitive_move if empty_squares.length > 9
+    empty_keys = brd.unmarked_keys
+    return brd.center_key if brd.center_square.unmarked?
+    return find_competitive_move if empty_keys.length > 9
 
-    empty_squares.max_by do |key|
-      sq = minimax(key, brd, depth, side)
-      puts "#{key}: #{sq}"
-      sq
+    weights = empty_keys.each_with_object({}) do |key, hash|
+      hash[key] = minimax(key, brd, depth, side)
     end
+    max_weight = weights.values.max
+    max_keys = weights.select { |_, val| val == max_weight }.keys
+
+    return max_keys.first if max_keys.length == 1
+
+    max_keys.sample
   end
 
-  ## look into cloning board and check if winning lines are correct at inception
   def negamax(square_key, brd, depth, side=1)
-    brd_copy = brd.clone
-    mark = side.positive? ? @marker : @opponent_marker
-    brd_copy[square_key] = mark
+    brd_copy = brd.copy
+    marker = side.positive? ? @marker : @opponent_marker
+    brd_copy[square_key] = marker
 
     terminal_node, value = brd_copy.terminal_node(@marker, @opponent_marker)
-
-    if terminal_node || depth == 0
-      return side * depth * value
-    end
+    return side * depth * value if terminal_node || depth == 0
 
     value = -INFINITY
 
@@ -374,44 +375,45 @@ class Computer < TTTPlayer
   end
 
   def find_negamax_move(brd=@board, depth=@plies, side=1)
-    empty_squares = brd.unmarked_keys
-    return brd.center_square if brd.center_square_unmarked?
-    return find_competitive_move if empty_squares.length > 9
+    empty_keys = brd.unmarked_keys
+    return brd.center_key if brd.center_square.unmarked?
+    return find_competitive_move if empty_keys.length > 9
 
-    empty_squares.max_by do |key|
-      sq = negamax(key, brd, depth, side)
-      puts "#{key}: #{sq}"
-      sq
+    weights = empty_keys.each_with_object({}) do |key, hash|
+      hash[key] = negamax(key, brd, depth, side)
     end
+    max_weight = weights.values.max
+    max_keys = weights.select { |_, val| val == max_weight }.keys
+
+    return max_keys.first if max_keys.length == 1
+
+    max_keys.sample
   end
-
-
 end
 
 class TTTGame
   include Formattable
 
-  HUMAN_MARKER = "X"
-  COMPUTER_MARKER = "O"
+  # HUMAN_MARKER = "X"
+  # COMPUTER_MARKER = "O"
   ROUNDS_TO_WIN = 3
-  DIFFICULTY = :negamax  ## :competitive, :minimax, :negamax
+  BOARD_SIZE = 3 ## ie choose 3, 5
+  DIFFICULTY = :negamax ## choose :competitive, :minimax, :negamax
 
   def initialize
-    @board = Board.new(3)
+    @board = Board.new(BOARD_SIZE)
+    set_human_marker
+    set_computer_marker
     @human = Human.new(@board, HUMAN_MARKER)
     @computer = Computer.new(@board, COMPUTER_MARKER, HUMAN_MARKER, DIFFICULTY)
     @round = 1
     set_first_move
   end
 
-  # rubocop:disable Metrics/MethodLength
   def play
     display_welcome_message
     loop do
-      loop do
-        current_player_moves
-        break if board.someone_won_round? || board.draw_round?
-      end
+      players_move
       display_round_results
       break if someone_won_game? || !continue_to_next_round?
       reset
@@ -419,7 +421,6 @@ class TTTGame
     display_game_results if someone_won_game?
     display_goodbye_message
   end
-  # rubocop:enable Metrics/MethodLength
 
   private
 
@@ -429,7 +430,11 @@ class TTTGame
   def display_welcome_message
     clear_screen
     puts "Welcome to Tic Tac Toe!"
-    puts "You will be playing against the computer."
+  end
+
+  def display_rules_message
+    puts "Welcome #{human.name}!"
+    puts "You will be playing against #{computer.name}."
     puts "The first to #{ROUNDS_TO_WIN} rounds wins all!"
     puts "Press enter to begin."
     gets.chomp
@@ -451,6 +456,16 @@ class TTTGame
     @current_marker = @round.odd? ? HUMAN_MARKER : COMPUTER_MARKER
   end
 
+  def human_moves
+    choice = human.choose_move
+    board[choice] = human.marker
+  end
+
+  def computer_moves
+    choice = computer.calculate_move
+    board[choice] = computer.marker
+  end
+
   def current_player_moves
     case @current_marker
     when human.marker
@@ -463,14 +478,11 @@ class TTTGame
     end
   end
 
-  def human_moves
-    choice = human.choose_move
-    board[choice] = human.marker
-  end
-
-  def computer_moves
-    choice = computer.calculate_move
-    board[choice] = computer.marker
+  def players_move
+    loop do
+      current_player_moves
+      break if board.someone_won_round? || board.draw_round?
+    end
   end
 
   def display_score
