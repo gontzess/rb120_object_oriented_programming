@@ -394,8 +394,8 @@ end
 class TTTGame
   include Formattable
 
-  # HUMAN_MARKER = "X"
-  # COMPUTER_MARKER = "O"
+  HUMAN_MARKER = "X" ## set after the fact w/ human.marker?
+  COMPUTER_MARKER = "O"
   ROUNDS_TO_WIN = 3
   BOARD_SIZE = 3 ## ie choose 3, 5
   DIFFICULTY = :negamax ## choose :competitive, :minimax, :negamax
