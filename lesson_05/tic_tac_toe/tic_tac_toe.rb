@@ -1,4 +1,4 @@
-# OO Tic Tac Toe program
+# Tic Tac Toe OO program
 module Formattable
   def clear_screen
     (system 'clear') || (system 'cls')
