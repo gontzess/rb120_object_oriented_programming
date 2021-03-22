@@ -21,7 +21,7 @@ class Deck
   end
 
   def draw
-    reset if @deck.empty?
+    reset if @cards.empty?
     @cards.shift
   end
 
