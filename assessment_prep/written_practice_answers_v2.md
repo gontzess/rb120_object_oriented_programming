@@ -82,6 +82,9 @@ A **module** is a grouping of like-minded, re-usable behaviors that does not fit
 **Abstraction**
 - Abstraction is when a complex state and set of behaviors are simplified into a single entity (ie a class object). Leveraging encapsulation, we can abstract away all the complex, specific nuances within a program, to instead focus on the major nouns (objects) and verbs (methods) in a program. This allows programmers to better conceptualize programs and write more intuitive code. Abstraction is one of 3 major pillars of OOP in Ruby.
 
+**Constructor**
+- We refer to the `initialize` method as a constructor, because it gets triggered whenever we create a new object. It is responsible for initializing all the instance variables (aka attributes) needed to capture the starting state of a new object.
+
 **Instance Variables**
 - Instance Variables keep track of information about the state of an object. Instance variables are scoped at the object level (aka instance level) and exist as long as the object instance exists. Every object's state is unique, and instance variables are how we keep track. They are written with the `@`symbol in front (ie `@name`).
   ```ruby

@@ -8,13 +8,13 @@ Answer the following questions using examples when necessary:
   - What is interface inheritance? How does this work in Ruby?
   - What is duck typing? How does this work in Ruby?
 4. What is abstraction? How is this achieved in Ruby?
-5. What is an object? What is a class? How are they related in Ruby?
+5. What is a class? What is an object? How are they related in Ruby?
 6. How do we create an object in Ruby? Give an example of the creation of an object.
   - What is a constructor? What is it's purpose?
 7. What is a module? What is it's purpose? How do we use them with our classes?
 8. What are the differences between classes and modules? How do you decide which to use?
 9. What is method overriding? What is the method lookup path? How are these two concepts related in Ruby and why is this important?
-10. What is an instance variable? What is a class variable? What is a constant variable? How do they differ from one another in Ruby?
+10. ** What is an instance variable? What is a class variable? What is a constant variable? How do they differ from one another in Ruby?
   - What's the difference between instance and class variables?
   - Why do many Rubyists avoid using class variables all together?
 11. What is an instance method? What is a class method? How do they differ from one another in Ruby?
