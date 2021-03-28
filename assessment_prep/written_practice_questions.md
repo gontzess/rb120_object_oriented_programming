@@ -5,8 +5,8 @@
 2. What is encapsulation? How is this achieved in Ruby?
 3. What is polymorphism? What are the different ways to apply polymorphism in Ruby?
 4. What is duck typing?
-5. What is class inheritance? What does this work in Ruby?
-6. What is a `Module`?
+5. What is class inheritance? How does this work in Ruby?
+6. What is an object? What is a `Class`? What is a `Module`?
 7. What are the differences between classes and modules? How do you decide which to use?
 8. What is instantiation? Provide an example.
 9. What is the method lookup path? How is it important?
