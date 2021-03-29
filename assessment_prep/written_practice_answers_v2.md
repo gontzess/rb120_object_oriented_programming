@@ -60,7 +60,7 @@ A **module** is a grouping of like-minded, re-usable behaviors that does not fit
 [example](https://launchschool.com/posts/b2b56435)
 
 **Class Inheritance**
-- Class Inheritance is where a class inherits attributes and behaviors from another. In Ruby each class has exactly one superclass, or class from which it inherits directly from. Class inheritance allows us to organize and classify objects into a hierarchical structure, so that more general/reusable attributes and behaviors can be rolled up higher in the chain, and more specialized attributes and behaviors can be set further down for subclasses.
+- Class Inheritance is where a class inherits behaviors from another. In Ruby each class has exactly one superclass, or class from which it inherits directly from. Class inheritance allows us to organize and classify objects into a hierarchical structure, so that more general/reusable behaviors can be rolled up higher in the chain, and more specialized behaviors can be set further down for subclasses.
 - We use the `<` symbol to signify that `GoodDog` class is inheriting from the `Animal` class defined prior.
   ```ruby
   class Doggie < Animal
@@ -286,3 +286,13 @@ Collaborator objects are objects that are stored as state within another object.
 - **True**
   - use "is true" or "is equal to true" only when specifically discussing the boolean `true`
   - remember that `true` and `false` are objects of `TrueClass` and `FalseClass` respectively
+- **Inheritance**
+  - Classes inherit from other classes
+  - Objects DO NOT inherit from their class, rather the class acts as a mold or template for objects of that class and determines the attributes and behaviors of those objects
+  - Every object has state. State is the collection of all instance variables and their values defined for an object. Since state is part of the object, not the class, state is not inherited.
+  - Checklist:
+    - A subclass inherits the methods of the superclass.
+    - Instance variables and their values are not inheritable.
+    - Attribute getters and setters are methods, so they are inheritable
+    - Attribute names and their values are just instance variables and values, so they are not inheritable
+    - State is a tied directly to individual objects, so is not inheritable.
