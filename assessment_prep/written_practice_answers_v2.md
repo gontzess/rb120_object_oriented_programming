@@ -1,7 +1,7 @@
 #### Concepts & Definitions
 
 **Object Oriented Programming**
-- programming paradigm created to deal with growing complexity of programs and software systems
+- programming paradigm created by programmers to deal with growing complexity of programs and software systems (also a way of thinking)
 - allows programmers to section off/organize code to make programs the interaction of many small parts, instead of one big ball of dependencies
 - the three pillars of OOP in Ruby (encapsulation, polymorphism, and abstraction) enable programmers the OOP foundation to create more scalable, efficient, and manageable programming
 
@@ -155,7 +155,7 @@ A **module** is a grouping of like-minded, re-usable behaviors that does not fit
 Once initialized, instance variables are only accessible and modify-able from within a specific instance of a class (via an instance method). Once initialized, a class variable is shared across all instances of a class and any of it's subclasses. So a class variable is accessible and modify-able to all instances of the class (and all/any instances of subclasses) via instance methods. A class variable is also accessible and modify-able via class methods, so without the involvement of an instance.
 
 **Instance Methods vs Class Methods**
-- Both method types are leveraged within class definitions however they vary in purpose, scope, and syntax. Instance methods are used to expose behaviors for objects (instances of a class), while class methods are used to expose behaviors class-wide.
+- Both method types are leveraged within class definitions however they vary in purpose, scope, and syntax. Instance methods define behaviors for objects (instances of a class), while class methods define behaviors class-wide.
 - As a result instance methods are scoped at the instance level while class methods are scoped at the class level. This means that we call instance methods on instances of a class (ie an object) to perform operations on that object, while we call class methods directly on the class itself, without having to instantiate any objects, to perform operations at the class level.
 - The syntax for defining and calling these two types of methods follows these differences.
 
